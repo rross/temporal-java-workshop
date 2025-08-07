@@ -2,8 +2,8 @@
 
 This project walks through starting a brand new Temporal Project and incrementally adding functionality. It includes
 
-* Workflows & Activiites
-* Tests (hopefully)
+* Workflows & Activities
+* Tests
 * Signals and Queries
 
 For more detailed courses, project based tutorials and example applications, check out our [courses](https://learn.temporal.io/)
@@ -91,7 +91,7 @@ Change the dependencies section to look like this:
   </dependencies>
 ```
 
-Finally, if you are using an IDE like IntelliJ or Visual Studio Code, add a maven compiler plugin immediately after the </pluginManagement> tag. 
+Finally, if you are using an IDE like IntelliJ or Visual Studio Code, add a maven compiler plugin immediately after the ```</pluginManagement>``` tag. 
 If you plan on only running this from a terminal window, you can skip this step.
 
 ```xml
