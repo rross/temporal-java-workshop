@@ -26,12 +26,12 @@ cd java-workshop
 Create a new Java project 
 
 ### Maven 
-If you are using Maven, run the following command:
+Run the following Maven command to create a new project:
 
 ```bash
 mvn -B archetype:generate \
 -DgroupId=helloworldapp \
--DartifactId=app2 \
+-DartifactId=app \
 -DarchetypeArtifactId=maven-archetype-quickstart \
 -DarchetypeVersion=1.4
 ```
@@ -129,8 +129,8 @@ activities.
 
 A workflow is a sequence of steps for a business process. Workflows are code, 
 which executes effectively once to completion. Workflows must be deterministic, 
-meaning that if I pass in the same parameters to the workflow, I expect it to 
-take the same code path each and every time.
+meaning that if you pass in the same parameters to the workflow, Temporal expects
+it to take the same code path each and every time.
 
 To create a Temporal Workflow in Java, you must first create an interface. 
 That interface is then annotated with ```@WorkflowInterface```. Inside the 
@@ -165,7 +165,7 @@ Notice the ```@WorkflowInterface``` annotation that lets the Temporal SDK
 know this is a Temporal Workflow. In order to run this worklow, the 
 ```getGreeting()``` method is annotated with  ```@WorkflowMethod```
 
-Create ```HelloWorldWorkflowImpl.java` in the same folder and add the following 
+Create ```HelloWorldWorkflowImpl.java``` in the same folder and add the following 
 code:
 
 ```java
@@ -256,7 +256,7 @@ this is a Temporal Activity. In this example, we only have one activity method
 ```composeGreeting()```. In more complex workflows, there could be many activity 
 methods.
 
-Create ```HelloWorldActivitiesImpl.java` in the same folder and add the 
+Create ```HelloWorldActivitiesImpl.java``` in the same folder and add the 
 following code:
 
 ```java
@@ -371,7 +371,7 @@ public class HelloWorldWorker {
 }
 ```
 
-This program first implements a service stub to be used when instantiating 
+This program implements a service stub to be used when instantiating 
 the client. The code first instantiates a factory and then creates a new 
 worker that listens on a Task Queue. This worker will only process workflows 
 and activities from this Task Queue. You register the Workflow and Activity 
@@ -453,7 +453,7 @@ For example, you might consider using a customer ID as part of the Workflow
 ID, if you create a workflow for each customer. This would make it easier 
 to find all of the Workflow Executions related to that customer later.
 
-The program then creates a stubbed instance of your Workflow, workflow, 
+The program then creates a stubbed instance of your Workflow, 
 taking the interface class of your workflow along with the options you 
 have set as parameters. This stub looks like an implementation of the 
 interface, but is used to communicate with the Temporal Server under the hood. 
@@ -478,12 +478,14 @@ temporal server start-dev
 
 Now start the worker
 ```bash
+cd app
 mvn compile exec:java -Dexec.mainClass="helloworldapp.HelloWorldWorker"
 ```
 
 And finally, start the Workflow Execution:
 
 ```bash
+cd app
 mvn exec:java -Dexec.mainClass="helloworldapp.InitiateHelloWorld"
 ```
 
@@ -497,7 +499,7 @@ Let's explore the Temporal UI to see the workflow and explore the history.
 
 In a browser open up the following address [http://localhost:8233](http://localhost:8233]). 
 Click on HelloWorldWorkflowID and notice all of the information available to help you 
-identify potential issues. 
+identify potential issues. Be sure to click on ComposeGreeting in the Event History so you can see the input and results of the activity. Experiment with the tabs at the bottom of the UI labled "All" and "Compact". What do you notice? 
 
 Stop the worker by using <CTRL-C> in the terminal window where the worker 
 is running. You can leave the Temporal Server running.
@@ -584,7 +586,7 @@ the Activity implementation so it returns a successful execution. The test then 
 in the test environment and checks for a successful execution. Finally, the tests ensures the Workflow's 
 return value returns the expected value.
 
-Run the following command from the project root to execute the unit tests:
+Run the following command from the project root (e.g. the app folder) to execute the unit tests:
 
 ```bash
 mvn compile test
@@ -654,6 +656,7 @@ package helloworldapp;
 import io.temporal.activity.ActivityOptions;
 import io.temporal.failure.ApplicationFailure;
 import io.temporal.workflow.Workflow;
+import org.slf4j.Logger;
 
 import java.time.Duration;
 
@@ -677,27 +680,33 @@ public class HelloWorldWorkflowImpl implements HelloWorldWorkflow {
      * The activity options that were defined above are passed in as a parameter.
      */
     private final HelloWorldActivities activity = Workflow.newActivityStub(HelloWorldActivities.class, options);
-    private String currentStep;
+    private String currentStep = "Starting";
     private boolean approved = false;
     private long approvalTime = 30;
+
+    private static final Logger log = Workflow.getLogger(HelloWorldWorkflowImpl.class);
 
     // This is the entry point to the Workflow.
     @Override
     public String getGreeting(String name) {
-
+        log.info("GetGreeting called {}", name);
         /**   
          * If there were other Activity methods they would be orchestrated here or from within other Activities.
          * This is a blocking call that returns only after the activity has completed.
          */
         String result =  activity.composeGreeting(name);
 
+        log.info("Result from activity is {}. Waiting for approval", result);
+
         currentStep = "Awaiting Approval";
         // wait for either the signal to arrive or time out
         boolean receivedApproval = Workflow.await(Duration.ofSeconds(approvalTime), () -> approved);
         if (receivedApproval) {
             currentStep = "The workflow has been approved!";
+            log.info("Approved!");
         }
         else {
+            log.info("Not approved. Timed out");
             currentStep = "The workflow timed out while waiting to be approved";
             // if we wanted to fail the workflow
             // we can throw an exception
@@ -705,7 +714,7 @@ public class HelloWorldWorkflowImpl implements HelloWorldWorkflow {
         }
 
         currentStep = "Complete!";
-
+        log.info("Returning {}", result);
         return result;
     }
 
@@ -928,7 +937,7 @@ WorkflowID is HelloWorldWorkflowID and the greeting is Hello World!
 If you want to run the workflow from the command line, you can start it with this command:
 
 ```bash
-temporal workflow start --type HelloWorldWorkflow --task-queue HelloWorldTaskQueue --input '"World"'
+temporal workflow start --type HelloWorldWorkflow --task-queue HelloWorldTaskQueue --workflow-id HelloWorldWorkflowID --input '"World"'
 ```
 
 And then signal the workflow using the Temporal CLI with this command:
